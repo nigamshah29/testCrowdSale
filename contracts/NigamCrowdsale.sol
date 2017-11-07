@@ -1,10 +1,11 @@
 pragma solidity ^0.4.0;
 
 import './zeppelin/ownership/Ownable.sol';
-import './oraclize/oraclizeAPI.sol';
+// import './oraclize/oraclizeAPI.sol';
+import './oraclize/oraclizeAPI.lib.sol';
 import './NigamCoin.sol';
 
-contract NigamCrowdsale is Ownable, HasNoTokens, usingOraclize {
+contract NigamCrowdsale is Ownable, HasNoTokens {
     using SafeMath for uint256;
     using SafeMath for uint8;
 
@@ -66,7 +67,7 @@ contract NigamCrowdsale is Ownable, HasNoTokens, usingOraclize {
         ){
         state = State.Paused;
 
-        ethPrice = _ethPrice;
+        // ethPrice = _ethPrice;
 
         preSale1BasePrice = _preSale1BasePrice;             
         preSale1DollarHardCap = _preSale1DollarHardCap;          
@@ -320,10 +321,10 @@ contract NigamCrowdsale is Ownable, HasNoTokens, usingOraclize {
     }
     /*============================ ORACLIZE ===========================================*/
 
-    /**
-    * @notice Owner can change price update interval
-    * @param newOraclizeUpdateInterval Update interval in seconds. Zero will stop updates.
-    */
+    // /**
+    // * @notice Owner can change price update interval
+    // * @param newOraclizeUpdateInterval Update interval in seconds. Zero will stop updates.
+    // */
     function updateInterval(uint32 newOraclizeUpdateInterval) public onlyOwner {
         if(oraclizeUpdateInterval == 0 && newOraclizeUpdateInterval > 0){
             oraclizeUpdateInterval = newOraclizeUpdateInterval;
@@ -332,19 +333,19 @@ contract NigamCrowdsale is Ownable, HasNoTokens, usingOraclize {
             oraclizeUpdateInterval = newOraclizeUpdateInterval;
         }
     }
-    /**
-    * @notice Owner can do this to start price updates
-    * Also, he can put some ether to the contract so that it can pay for the updates
-    */
-    function updateEthPrice() public payable onlyOwner{
-        oraclize_setProof(proofType_TLSNotary | proofStorage_IPFS);
+    // /**
+    // * @notice Owner can do this to start price updates
+    // * Also, he can put some ether to the contract so that it can pay for the updates
+    // */
+    function KrakenPriceTicker() public payable onlyOwner{
+        oraclizeLib.oraclize_setProof(oraclizeLib.proofType_TLSNotary() | oraclizeLib.proofStorage_IPFS());
         updateEthPriceInternal();
     }
-    /**
-    * @dev Callback for Oraclize
-    */
+    // /**
+    // * @dev Callback for Oraclize
+    // */
     function __callback(bytes32 myid, string result, bytes proof){
-        require(msg.sender == oraclize_cbAddress());
+        if (msg.sender != oraclizeLib.oraclize_cbAddress()) throw;
         ETHUSD = result;
         newKrakenPriceTicker(ETHUSD);
         // ethPrice = parseInt(ETHUSD, 10);      //2nd argument needs to be the radix, 2 makes ethPrice to be price in 0.01 USD
@@ -354,8 +355,16 @@ contract NigamCrowdsale is Ownable, HasNoTokens, usingOraclize {
             updateEthPriceInternal();
         }
     }
-    function updateEthPriceInternal() internal {
-        oraclize_query(oraclizeUpdateInterval, "URL", "json(https://api.kraken.com/0/public/Ticker?pair=ETHUSD).result.XETHZUSD.c.0");
+    // function updateEthPriceInternal() internal {
+    //     oraclize_query(oraclizeUpdateInterval, "URL", "json(https://api.kraken.com/0/public/Ticker?pair=ETHUSD).result.XETHZUSD.c.0");
+    // }
+    function updateEthPriceInternal() payable {
+        if (oraclizeLib.oraclize_getPrice("URL") > this.balance) {
+            newOraclizeQuery("Oraclize query was NOT sent, please add some ETH to cover for the query fee");
+        } else {
+            newOraclizeQuery("Oraclize query was sent, standing by for the answer..");
+            oraclizeLib.oraclize_query(oraclizeUpdateInterval, "URL", "json(https://api.kraken.com/0/public/Ticker?pair=ETHUSD).result.XETHZUSD.c.0");
+        }
     }
 }
 
