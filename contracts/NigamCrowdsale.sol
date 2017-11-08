@@ -2,7 +2,7 @@ pragma solidity ^0.4.0;
 
 import './zeppelin/ownership/Ownable.sol';
 // import './oraclize/oraclizeAPI.sol';
-//import './oraclize/oraclizeAPI.lib.sol';
+import './oraclize/oraclizeAPI.lib.sol';
 import './NigamCoin.sol';
 
 contract NigamCrowdsale is Ownable, HasNoTokens {
@@ -321,51 +321,43 @@ contract NigamCrowdsale is Ownable, HasNoTokens {
     }
     /*============================ ORACLIZE ===========================================*/
 
-    // /**
-    // * @notice Owner can change price update interval
-    // * @param newOraclizeUpdateInterval Update interval in seconds. Zero will stop updates.
-    // */
-    // function updateInterval(uint32 newOraclizeUpdateInterval) public onlyOwner {
-    //     if(oraclizeUpdateInterval == 0 && newOraclizeUpdateInterval > 0){
-    //         oraclizeUpdateInterval = newOraclizeUpdateInterval;
-    //         updateEthPriceInternal();
-    //     }else{
-    //         oraclizeUpdateInterval = newOraclizeUpdateInterval;
-    //     }
-    // }
-    // /**
-    // * @notice Owner can do this to start price updates
-    // * Also, he can put some ether to the contract so that it can pay for the updates
-    // */
-    // function KrakenPriceTicker() public payable onlyOwner{
-    //     oraclizeLib.oraclize_setProof(oraclizeLib.proofType_TLSNotary() | oraclizeLib.proofStorage_IPFS());
-    //     updateEthPriceInternal();
-    // }
-    // /**
-    // * @dev Callback for Oraclize
-    // */
-    // function __callback(bytes32 myid, string result, bytes proof){
-    //     if (msg.sender != oraclizeLib.oraclize_cbAddress()) throw;
-    //     ETHUSD = result;
-    //     newKrakenPriceTicker(ETHUSD);
-    //     // ethPrice = parseInt(ETHUSD, 10);      //2nd argument needs to be the radix, 2 makes ethPrice to be price in 0.01 USD
-    //     // ethPrice = ethPrice.div(100);      //makes ethPrice to be price in 1 USD        
-    //     // EthPriceUpdate(ethPrice);            //Event for ETH Price Update
-    //     if(oraclizeUpdateInterval > 0){
-    //         updateEthPriceInternal();
-    //     }
-    // }
-    // function updateEthPriceInternal() internal {
-    //     oraclize_query(oraclizeUpdateInterval, "URL", "json(https://api.kraken.com/0/public/Ticker?pair=ETHUSD).result.XETHZUSD.c.0");
-    // }
-    // function updateEthPriceInternal() payable {
-    //     if (oraclizeLib.oraclize_getPrice("URL") > this.balance) {
-    //         newOraclizeQuery("Oraclize query was NOT sent, please add some ETH to cover for the query fee");
-    //     } else {
-    //         newOraclizeQuery("Oraclize query was sent, standing by for the answer..");
-    //         oraclizeLib.oraclize_query(oraclizeUpdateInterval, "URL", "json(https://api.kraken.com/0/public/Ticker?pair=ETHUSD).result.XETHZUSD.c.0");
-    //     }
-    // }
+    /**
+    * @notice Owner can change price update interval
+    * @param newOraclizeUpdateInterval Update interval in seconds. Zero will stop updates.
+    */
+    function updateInterval(uint32 newOraclizeUpdateInterval) public onlyOwner {
+        if(oraclizeUpdateInterval == 0 && newOraclizeUpdateInterval > 0){
+            oraclizeUpdateInterval = newOraclizeUpdateInterval;
+            updateEthPriceInternal();
+        }else{
+            oraclizeUpdateInterval = newOraclizeUpdateInterval;
+        }
+    }
+    /**
+    * @notice Owner can do this to start price updates
+    * Also, he can put some ether to the contract so that it can pay for the updates
+    */
+    function KrakenPriceTicker() public payable onlyOwner{
+        oraclizeLib.oraclize_setProof(oraclizeLib.proofType_TLSNotary() | oraclizeLib.proofStorage_IPFS());
+        updateEthPriceInternal();
+    }
+    /**
+    * @dev Callback for Oraclize
+    */
+    function __callback(bytes32 myid, string result, bytes proof){
+        if (msg.sender != oraclizeLib.oraclize_cbAddress()) throw;
+        ETHUSD = result;
+        newKrakenPriceTicker(ETHUSD);
+        updateEthPriceInternal();
+    }
+    function updateEthPriceInternal() payable {
+        if (oraclizeLib.oraclize_getPrice("URL") > this.balance) {
+            newOraclizeQuery("Oraclize query was NOT sent, please add some ETH to cover for the query fee");
+        } else {
+            newOraclizeQuery("Oraclize query was sent, standing by for the answer..");
+            oraclizeLib.oraclize_query(oraclizeUpdateInterval, "URL", "json(https://api.kraken.com/0/public/Ticker?pair=ETHUSD).result.XETHZUSD.c.0");
+        }
+    }
 }
 
 
